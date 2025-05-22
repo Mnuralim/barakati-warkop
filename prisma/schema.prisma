@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           String        @id @default(uuid())
+  username     String        @unique
+  password     String
+  menus        Menu[]        @relation("AdminToMenu")
+  categories   Category[]    @relation("AdminToCategory")
+  salesReports SalesReport[] @relation()
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+}
+
+model Category {
+  id         String   @id @default(uuid())
+  name       String
+  image      String?  @db.Text
+  admin      Admin    @relation("AdminToCategory", fields: [admin_id], references: [id], onDelete: Cascade)
+  admin_id   String
+  menus      Menu[]   @relation("CategoryToMenu")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+enum MenuType {
+  FOOD
+  BEVERAGE
+  OTHER
+}
+
+model Menu {
+  id         String      @id @default(uuid())
+  name       String
+  image      String?     @db.Text
+  price      Float
+  menuType   MenuType    @default(OTHER)
+  status     Boolean     @default(true)
+  admin      Admin       @relation("AdminToMenu", fields: [admin_id], references: [id], onDelete: Cascade)
+  admin_id   String
+  categories Category[]  @relation("CategoryToMenu")
+  orderItems OrderItem[] @relation("MenuToOrderItem")
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+}
+
+enum OrderStatus {
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+model Order {
+  id             String       @id @default(uuid())
+  customer_name  String?
+  total_price    Float
+  code           String       @unique
+  note           String?      @db.Text
+  status         OrderStatus  @default(PROCESSING)
+  orderItems     OrderItem[]  @relation("OrderToOrderItem")
+  salesReport_id String?
+  salesReport    SalesReport? @relation("ReportToOrder", fields: [salesReport_id], references: [id], onDelete: SetNull)
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  quantity   Int
+  price      Float
+  note       String?  @db.Text
+  order      Order    @relation("OrderToOrderItem", fields: [order_id], references: [id], onDelete: Cascade)
+  order_id   String
+  menu       Menu     @relation("MenuToOrderItem", fields: [menu_id], references: [id], onDelete: Cascade)
+  menu_id    String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model SalesReport {
+  id               String   @id @default(uuid())
+  date             DateTime
+  total_items_sold Int
+  income           Float
+  admin_id         String
+  admin            Admin    @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  orders           Order[]  @relation("ReportToOrder")
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+}
