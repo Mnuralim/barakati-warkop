@@ -81,6 +81,20 @@ export const DetailOrder = ({ order }: Props) => {
     setPaymentAmount(value ? parseInt(value) : 0);
   };
 
+  // Check if order status is final (cannot be edited)
+  const isOrderStatusFinal =
+    order.status === "COMPLETED" || order.status === "CANCELLED";
+
+  // Get tooltip message for disabled edit button
+  const getDisabledTooltipMessage = () => {
+    if (order.status === "COMPLETED") {
+      return "Pesanan sudah selesai, status tidak dapat diubah lagi";
+    } else if (order.status === "CANCELLED") {
+      return "Pesanan sudah dibatalkan, status tidak dapat diubah lagi";
+    }
+    return "";
+  };
+
   return (
     <div className="flex-1 p-4 md:p-6">
       <div className="mb-8">
@@ -97,13 +111,29 @@ export const DetailOrder = ({ order }: Props) => {
             </h1>
           </div>
           <div className="flex space-x-3 w-full md:w-auto">
-            <button
-              onClick={() => setIsEditModalOpen(true)}
-              className="bg-indigo-600 text-white px-5 py-3 rounded-md border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all font-bold flex items-center justify-center flex-1 md:flex-initial"
-            >
-              <Edit className="w-5 h-5 mr-2" />
-              Edit Status
-            </button>
+            <div className="relative group flex-1 md:flex-initial">
+              <button
+                onClick={() => !isOrderStatusFinal && setIsEditModalOpen(true)}
+                disabled={isOrderStatusFinal}
+                className={`${
+                  isOrderStatusFinal
+                    ? "bg-gray-400 text-gray-600 cursor-not-allowed border-gray-500 shadow-[4px_4px_0px_0px_rgba(156,163,175,1)]"
+                    : "bg-indigo-600 text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                } px-5 py-3 rounded-md border-4 transition-all font-bold flex items-center justify-center w-full`}
+              >
+                <Edit className="w-5 h-5 mr-2" />
+                Edit Status
+              </button>
+
+              {/* Tooltip for disabled button */}
+              {isOrderStatusFinal && (
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                  {getDisabledTooltipMessage()}
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                </div>
+              )}
+            </div>
+
             <button className="bg-amber-400 text-black px-5 py-3 rounded-md border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all font-bold flex items-center justify-center flex-1 md:flex-initial">
               <Printer className="w-5 h-5 mr-2" />
               Cetak
@@ -271,7 +301,7 @@ export const DetailOrder = ({ order }: Props) => {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <div className="h-20 w-20 relative rounded-md overflow-hidden border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                          <div className="h-20 w-20 min-w-20 relative rounded-md overflow-hidden border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                             <Image
                               width={400}
                               height={400}

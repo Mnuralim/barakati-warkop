@@ -205,6 +205,23 @@ export async function updateOrder(
     return { error: "Status order tidak ditemukan" };
   }
 
+  const order = await prisma.order.findUnique({
+    where: {
+      id,
+    },
+  });
+  if (!order) {
+    return { error: "Order tidak ditemukan" };
+  }
+
+  if (order.status === "COMPLETED") {
+    return { error: "Pesanan sudah selesai" };
+  }
+
+  if (order.status === "CANCELLED") {
+    return { error: "Pesanan sudah dibatalkan" };
+  }
+
   const updatedOrder = await prisma.order.update({
     where: {
       id,

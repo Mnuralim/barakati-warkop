@@ -68,8 +68,16 @@ export function Sidebar({ className = "", username }: SidebarProps) {
     };
   }, [isOpen, isMounted]);
 
+  useEffect(() => {
+    if (isOpen && window.innerWidth < 1024) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+  }, [isOpen]);
+
   const toggleSidebar = () => {
-    setIsOpen(!isOpen);
+    setIsOpen((prev) => !prev);
   };
 
   const closeSidebarOnMobile = () => {
@@ -122,7 +130,7 @@ export function Sidebar({ className = "", username }: SidebarProps) {
 
       {isOpen && (
         <div
-          className="fixed inset-0 backdrop-blur-sm bg-opacity-30 z-20 lg:hidden"
+          className="fixed inset-0 backdrop-blur-sm bg-opacity-30 z-40 lg:hidden"
           onClick={toggleSidebar}
           aria-hidden="true"
         />
@@ -131,7 +139,7 @@ export function Sidebar({ className = "", username }: SidebarProps) {
       <aside
         ref={sidebarRef}
         className={`
-          fixed left-0 top-0 h-full z-30
+          fixed left-0 top-0 h-full z-50
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
           transition-transform duration-300 ease-in-out
           w-72 bg-white border-r-4 border-black

@@ -16,7 +16,7 @@ export default async function AddOrderPage({ searchParams }: Props) {
     getAllCategories(),
   ]);
   return (
-    <div>
+    <div className="pb-24">
       <ListMenu
         menus={menus}
         categories={categories}

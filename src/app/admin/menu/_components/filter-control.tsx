@@ -77,6 +77,11 @@ export const FilterControl1 = ({ currentSortMenu, categories }: Props) => {
     });
   };
 
+  const categoryWithAll = [
+    { id: "ALL", name: "Semua Kategori" },
+    ...categories,
+  ];
+
   return (
     <div className="mb-6 space-y-4">
       <div className="bg-neutral-50 border-4 border-neutral-700 shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] rounded-none p-4">
@@ -108,7 +113,7 @@ export const FilterControl1 = ({ currentSortMenu, categories }: Props) => {
                 onChange={handleFilterCategory}
                 className="w-full appearance-none border-2 border-neutral-700 p-2 pr-10 rounded-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                {categories.map((option) => (
+                {categoryWithAll.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.name}
                   </option>

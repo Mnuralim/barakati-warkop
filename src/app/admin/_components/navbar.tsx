@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { User, LogOut, ChevronDown } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { logout } from "@/actions/auth";
+import Link from "next/link";
 
 interface NavbarProps {
   className?: string;
@@ -101,10 +102,13 @@ export function Navbar({ className = "", username }: NavbarProps) {
                 {username || "User"}
               </p>
             </div>
-            <button className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">
+            <Link
+              href="/admin/settings"
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 font-medium"
+            >
               <User className="w-4 h-4" />
               <span>Profil</span>
-            </button>
+            </Link>
             <form action={logout}>
               <button
                 type="submit"
