@@ -66,6 +66,7 @@ model Order {
   status         OrderStatus  @default(PROCESSING)
   orderItems     OrderItem[]  @relation("OrderToOrderItem")
   salesReport_id String?
+  invoice        String?
   salesReport    SalesReport? @relation("ReportToOrder", fields: [salesReport_id], references: [id], onDelete: SetNull)
   created_at     DateTime     @default(now())
   updated_at     DateTime     @updatedAt

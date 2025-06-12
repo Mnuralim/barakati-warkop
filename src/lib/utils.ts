@@ -1,3 +1,5 @@
+import type jsPDF from "jspdf";
+
 export const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -26,4 +28,8 @@ export const generateUniqueCode = () => {
     code += characters.charAt(randomIndex);
   }
   return code;
+};
+
+export const generateInvoicePDF = async (doc: jsPDF) => {
+  return Buffer.from(doc.output("arraybuffer"));
 };

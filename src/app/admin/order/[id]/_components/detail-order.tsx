@@ -7,8 +7,9 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { Modal } from "@/app/admin/_components/modal";
 import type { OrderStatus, Prisma } from "@prisma/client";
 import { useFormState } from "react-dom";
-import { updateOrder } from "@/actions/order";
+import { createInvoice, updateOrder } from "@/actions/order";
 import { ErrorMessage } from "@/app/admin/_components/error-message";
+import { CreateInvoiceButton } from "./create-invoice-button";
 
 type OrderWithItems = Prisma.OrderGetPayload<{
   include: {
@@ -81,11 +82,9 @@ export const DetailOrder = ({ order }: Props) => {
     setPaymentAmount(value ? parseInt(value) : 0);
   };
 
-  // Check if order status is final (cannot be edited)
   const isOrderStatusFinal =
     order.status === "COMPLETED" || order.status === "CANCELLED";
 
-  // Get tooltip message for disabled edit button
   const getDisabledTooltipMessage = () => {
     if (order.status === "COMPLETED") {
       return "Pesanan sudah selesai, status tidak dapat diubah lagi";
@@ -125,7 +124,6 @@ export const DetailOrder = ({ order }: Props) => {
                 Edit Status
               </button>
 
-              {/* Tooltip for disabled button */}
               {isOrderStatusFinal && (
                 <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
                   {getDisabledTooltipMessage()}
@@ -134,10 +132,22 @@ export const DetailOrder = ({ order }: Props) => {
               )}
             </div>
 
-            <button className="bg-amber-400 text-black px-5 py-3 rounded-md border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all font-bold flex items-center justify-center flex-1 md:flex-initial">
-              <Printer className="w-5 h-5 mr-2" />
-              Cetak
-            </button>
+            {order.status === "COMPLETED" && !order.invoice ? (
+              <form action={() => createInvoice(order.id)}>
+                <CreateInvoiceButton />
+              </form>
+            ) : null}
+            {order.invoice ? (
+              <Link
+                href={order.invoice}
+                target="_blank"
+                download
+                className="bg-amber-400 text-black px-5 py-3 rounded-md border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all font-bold flex items-center justify-center flex-1 md:flex-initial"
+              >
+                <Printer className="w-5 h-5 mr-2" />
+                Cetak
+              </Link>
+            ) : null}
           </div>
         </div>
 

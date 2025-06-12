@@ -1,11 +1,13 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { generateUniqueCode } from "@/lib/utils";
+import { generateInvoicePDF, generateUniqueCode } from "@/lib/utils";
 import type { OrderStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { verifySession } from "./session";
+import { invoiceDoc } from "@/lib/invoice";
+import { imagekit } from "@/lib/imagekit";
 
 interface OrderState {
   error: string | null;
@@ -288,4 +290,60 @@ export async function updateOrder(
 
   revalidatePath(`/admin/order/${id}`);
   redirect(`/admin/order/${id}`);
+}
+
+export async function createInvoice(orderId: string): Promise<void> {
+  try {
+    const order = await prisma.order.findUnique({
+      where: {
+        id: orderId,
+      },
+      include: {
+        orderItems: {
+          include: {
+            menu: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new Error(`Order dengan ID ${orderId} tidak ditemukan`);
+    }
+
+    if (order.status === "CANCELLED") {
+      throw new Error(`Order dengan ID ${orderId} telah dibatalkan`);
+    }
+
+    if (order.status === "PROCESSING") {
+      throw new Error(`Order dengan ID ${orderId} sedang diproses`);
+    }
+
+    if (order.invoice) {
+      throw new Error(`Invoice untuk order dengan ID ${orderId} sudah dibuat`);
+    }
+
+    const doc = invoiceDoc(order);
+    const pdfBuffer = await generateInvoicePDF(doc);
+
+    const uploadResponse = await imagekit.upload({
+      file: pdfBuffer,
+      fileName: `invoice-${order.id}.pdf`,
+      folder: "pemesanan/invoice",
+      useUniqueFileName: true,
+    });
+
+    await prisma.order.update({
+      where: {
+        id: orderId,
+      },
+      data: {
+        invoice: uploadResponse.url,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    throw new Error("Gagal membuat invoice");
+  }
+  revalidatePath(`/admin/order/${orderId}`);
 }

@@ -12,7 +12,7 @@ interface Props {
 export default async function AddOrderPage({ searchParams }: Props) {
   const { category, search, menuType } = await searchParams;
   const [menus, categories] = await Promise.all([
-    getAllMenu(1000, 0, category, search, menuType as MenuType),
+    getAllMenu(100000, 0, category, search, menuType as MenuType),
     getAllCategories(),
   ]);
   return (

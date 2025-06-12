@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { StatusTracker } from "./status-tracker";
 import { OrderItem } from "./order-item";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { ChevronDown, ChevronUp, X, Download } from "lucide-react";
 import type { OrderStatus, Prisma } from "@prisma/client";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type OrderWithItems = Prisma.OrderGetPayload<{
   include: {
@@ -134,7 +135,20 @@ export const OrderDetail = ({ order }: Props) => {
         </div>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-4">
+        {order.invoice && (
+          <Link
+            href={order.invoice}
+            target="_blank"
+            rel="noopener noreferrer"
+            download
+            className="bg-green-600 cursor-pointer text-white border-4 border-neutral-700 px-6 py-3 font-bold shadow-[8px_8px_0px_0px_rgba(20,20,20,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] active:translate-y-2 active:translate-x-2 active:shadow-none transition-all flex items-center"
+          >
+            <Download className="mr-2 w-5 h-5" strokeWidth={2.5} />
+            Download Invoice
+          </Link>
+        )}
+
         <button
           onClick={handleReset}
           className="bg-red-600 cursor-pointer text-white border-4 border-neutral-700 px-6 py-3 font-bold shadow-[8px_8px_0px_0px_rgba(20,20,20,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] active:translate-y-2 active:translate-x-2 active:shadow-none transition-all flex items-center"
