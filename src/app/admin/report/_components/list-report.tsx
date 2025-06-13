@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useRef } from "react";
@@ -22,9 +23,14 @@ type SalesReportWithAdminOrders = Prisma.SalesReportGetPayload<{
 interface Props {
   reports: SalesReportWithAdminOrders[];
   currentSortReport?: string;
+  reportType?: string;
 }
 
-export const ListReport = ({ reports, currentSortReport }: Props) => {
+export const ListReport = ({
+  reports,
+  currentSortReport,
+  reportType,
+}: Props) => {
   const columns: TabelColumn<SalesReportWithAdminOrders>[] = [
     {
       header: "No",
@@ -32,9 +38,25 @@ export const ListReport = ({ reports, currentSortReport }: Props) => {
       render: (_, index) => (index as number) + 1,
     },
     {
-      header: "Tanggal",
-      accessor: (item) =>
-        formatDate(item.date.toString()).split(" ").slice(0, 3).join(" "),
+      header: "Periode",
+      accessor: (item) => {
+        if (reportType === "yearly" && (item as any).displayName) {
+          return (item as any).displayName;
+        }
+
+        if (reportType === "monthly" && (item as any).displayName) {
+          return (item as any).displayName;
+        }
+
+        const formattedDate = formatDate(item.date.toString());
+        if (reportType === "monthly") {
+          return formattedDate.split(" ").slice(1, 3).join(" ");
+        }
+        if (reportType === "yearly") {
+          return `Tahun ${new Date(item.date).getFullYear()}`;
+        }
+        return formattedDate.split(" ").slice(0, 3).join(" ");
+      },
     },
     {
       header: "Total Transaksi",
@@ -58,25 +80,85 @@ export const ListReport = ({ reports, currentSortReport }: Props) => {
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: "Laporan-Penjualan",
+    documentTitle: `Laporan-Penjualan-${reportType || "semua"}`,
   });
+
+  const getReportTypeLabel = () => {
+    switch (reportType) {
+      case "daily":
+        return "Harian";
+      case "monthly":
+        return "Bulanan";
+      case "yearly":
+        return "Tahunan";
+      default:
+        return "Semua";
+    }
+  };
+
+  const getReportDescription = () => {
+    switch (reportType) {
+      case "daily":
+        return "Laporan penjualan agregat per hari";
+      case "monthly":
+        return "Laporan penjualan agregat per bulan";
+      case "yearly":
+        return "Laporan penjualan agregat per tahun";
+      default:
+        return "Laporan penjualan keseluruhan";
+    }
+  };
+
+  const formatPeriodeForMobile = (report: SalesReportWithAdminOrders) => {
+    if (reportType === "yearly" && (report as any).displayName) {
+      return (report as any).displayName;
+    }
+
+    if (reportType === "monthly" && (report as any).displayName) {
+      return (report as any).displayName;
+    }
+
+    const formattedDate = formatDate(report.date.toString());
+    if (reportType === "monthly") {
+      return formattedDate.split(" ").slice(1, 3).join(" ");
+    }
+    if (reportType === "yearly") {
+      return `Tahun ${new Date(report.date).getFullYear()}`;
+    }
+    return formattedDate.split(" ").slice(0, 3).join(" ");
+  };
 
   return (
     <div className="w-full pb-10">
-      <FilterControl currentSortReport={currentSortReport} />
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          Laporan Penjualan {getReportTypeLabel()}
+        </h1>
+        <p className="text-gray-600">{getReportDescription()}</p>
+      </div>
 
-      <div className="flex justify-end">
+      <FilterControl currentSortReport={currentSortReport} reports={reports} />
+
+      <div className="flex justify-between items-center mb-5">
+        <div className="text-sm text-gray-600">
+          Menampilkan {reports.length} laporan
+        </div>
         <button
           onClick={handlePrint}
-          className="bg-indigo-600 text-white border-4 border-neutral-700 px-6 py-2 font-bold shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px_rgba(20,20,20,1)] active:translate-y-2 active:translate-x-2 active:shadow-none transition-all mb-5 cursor-pointer"
+          className="bg-indigo-600 text-white border-4 border-neutral-700 px-6 py-2 font-bold shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px_rgba(20,20,20,1)] active:translate-y-2 active:translate-x-2 active:shadow-none transition-all cursor-pointer"
         >
           Cetak Laporan
         </button>
       </div>
 
       <div style={{ display: "none" }}>
-        <PrintableReport ref={printRef} reports={reports} />
+        <PrintableReport
+          ref={printRef}
+          reports={reports}
+          reportType={reportType}
+        />
       </div>
+
       <div className="hidden md:block bg-neutral-50 border-4 border-neutral-700 shadow-[8px_8px_0px_0px_rgba(20,20,20,1)] overflow-hidden rounded-none">
         <div className="overflow-x-auto">
           <Tabel columns={columns} data={reports} />
@@ -84,40 +166,48 @@ export const ListReport = ({ reports, currentSortReport }: Props) => {
       </div>
 
       <div className="md:hidden space-y-4">
-        {reports.map((report) => (
-          <div
-            key={report.id}
-            className="bg-neutral-50 border-4 border-neutral-700 shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] p-4 rounded-none"
-          >
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-bold">
-                {formatDate(report.date.toString())
-                  .split(" ")
-                  .slice(0, 3)
-                  .join(" ")}
-              </span>
-              <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-sm text-sm">
-                {report.admin?.username}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <p className="text-gray-600">Total Transaksi</p>
-                <p className="font-semibold">{report.orders.length}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Menu Terjual</p>
-                <p className="font-semibold">{report.total_items_sold}</p>
-              </div>
-              <div className="col-span-2">
-                <p className="text-gray-600">Pendapatan</p>
-                <p className="font-bold text-lg">
-                  {formatCurrency(report.income)}
-                </p>
-              </div>
-            </div>
+        {reports.length === 0 ? (
+          <div className="bg-neutral-50 border-4 border-neutral-700 shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] p-8 rounded-none text-center">
+            <p className="text-gray-500 text-lg">
+              Tidak ada data laporan ditemukan
+            </p>
+            <p className="text-gray-400 text-sm mt-2">
+              Coba ubah filter atau rentang tanggal
+            </p>
           </div>
-        ))}
+        ) : (
+          reports.map((report) => (
+            <div
+              key={report.id}
+              className="bg-neutral-50 border-4 border-neutral-700 shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] p-4 rounded-none"
+            >
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-bold">
+                  {formatPeriodeForMobile(report)}
+                </span>
+                <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-sm text-sm">
+                  {report.admin?.username}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p className="text-gray-600">Total Transaksi</p>
+                  <p className="font-semibold">{report.orders.length}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Menu Terjual</p>
+                  <p className="font-semibold">{report.total_items_sold}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-gray-600">Pendapatan</p>
+                  <p className="font-bold text-lg">
+                    {formatCurrency(report.income)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

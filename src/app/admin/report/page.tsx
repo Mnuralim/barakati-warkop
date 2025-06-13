@@ -8,8 +8,15 @@ interface Props {
 }
 
 export default async function ReportPage({ searchParams }: Props) {
-  const { startDate, endDate, sortBy, sortReport } = await searchParams;
-  const reports = await getReports(startDate, endDate, sortBy, sortReport);
+  const { startDate, endDate, sortBy, sortReport, reportType } =
+    await searchParams;
+  const reports = await getReports(
+    startDate,
+    endDate,
+    sortBy,
+    sortReport,
+    reportType
+  );
   return (
     <main className="w-full px-3 sm:px-3 md:px-8 py-8 min-h-screen bg-neutral-50">
       <div className="mx-auto">
@@ -23,7 +30,11 @@ export default async function ReportPage({ searchParams }: Props) {
             </p>
           </div>
 
-          <ListReport reports={reports} currentSortReport={sortReport} />
+          <ListReport
+            reports={reports}
+            currentSortReport={sortReport}
+            reportType={reportType}
+          />
         </div>
       </div>
     </main>
