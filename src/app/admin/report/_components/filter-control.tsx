@@ -12,6 +12,7 @@ import { formatCurrency } from "@/lib/utils";
 import type { Prisma } from "@prisma/client";
 
 interface Props {
+  currentReportType?: string;
   currentSortReport?: string;
   reports?: Prisma.SalesReportGetPayload<{
     include: {
@@ -25,9 +26,13 @@ interface Props {
   }>[];
 }
 
-export const FilterControl = ({ currentSortReport, reports = [] }: Props) => {
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+export const FilterControl = ({
+  currentSortReport,
+  reports = [],
+  currentReportType,
+}: Props) => {
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedYear, setSelectedYear] = useState("");
   const { replace } = useRouter();
   const searchParams = useSearchParams();
 
@@ -38,10 +43,31 @@ export const FilterControl = ({ currentSortReport, reports = [] }: Props) => {
 
   const reportTypeOptions = [
     { value: "all", label: "Semua Data" },
-    { value: "daily", label: "Agregat Harian" },
-    { value: "monthly", label: "Agregat Bulanan" },
-    { value: "yearly", label: "Agregat Tahunan" },
+    { value: "monthly", label: "Laporan Bulanan" },
+    { value: "yearly", label: "Laporan Tahunan" },
   ];
+
+  const months = [
+    { value: "01", label: "Januari" },
+    { value: "02", label: "Februari" },
+    { value: "03", label: "Maret" },
+    { value: "04", label: "April" },
+    { value: "05", label: "Mei" },
+    { value: "06", label: "Juni" },
+    { value: "07", label: "Juli" },
+    { value: "08", label: "Agustus" },
+    { value: "09", label: "September" },
+    { value: "10", label: "Oktober" },
+    { value: "11", label: "November" },
+    { value: "12", label: "Desember" },
+  ];
+
+  // Generate years (current year and previous 5 years)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => {
+    const year = currentYear - i;
+    return { value: year.toString(), label: year.toString() };
+  });
 
   const handleSortBy = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newParams = new URLSearchParams(searchParams);
@@ -54,6 +80,11 @@ export const FilterControl = ({ currentSortReport, reports = [] }: Props) => {
   const handleReportType = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set("reportType", e.target.value);
+    newParams.delete("startDate");
+    newParams.delete("endDate");
+    setSelectedMonth("");
+    setSelectedYear("");
+
     replace(`/admin/report?${newParams.toString()}`, {
       scroll: false,
     });
@@ -68,15 +99,44 @@ export const FilterControl = ({ currentSortReport, reports = [] }: Props) => {
   };
 
   const handleDateFilter = () => {
+    if (currentReportType === "monthly" && (!selectedMonth || !selectedYear)) {
+      alert("Silakan pilih bulan dan tahun");
+      return;
+    }
+
+    if (currentReportType === "yearly" && !selectedYear) {
+      alert("Silakan pilih tahun");
+      return;
+    }
+
     const newParams = new URLSearchParams(searchParams);
-    newParams.set("startDate", startDate);
-    newParams.set("endDate", endDate);
+
+    if (currentReportType === "monthly") {
+      const startDate = `${selectedYear}-${selectedMonth}-01`;
+      const endDate = new Date(
+        parseInt(selectedYear),
+        parseInt(selectedMonth),
+        0
+      )
+        .toISOString()
+        .split("T")[0];
+      newParams.set("startDate", startDate);
+      newParams.set("endDate", endDate);
+    } else if (currentReportType === "yearly") {
+      const startDate = `${selectedYear}-01-01`;
+      const endDate = `${selectedYear}-12-31`;
+      newParams.set("startDate", startDate);
+      newParams.set("endDate", endDate);
+    }
+
     replace(`/admin/report?${newParams.toString()}`, {
       scroll: false,
     });
   };
 
   const handleReset = () => {
+    setSelectedMonth("");
+    setSelectedYear("");
     const newParams = new URLSearchParams(searchParams);
     newParams.delete("startDate");
     newParams.delete("endDate");
@@ -86,7 +146,6 @@ export const FilterControl = ({ currentSortReport, reports = [] }: Props) => {
     });
   };
 
-  // Calculate totals from reports
   const totalIncome = reports.reduce((sum, report) => sum + report.income, 0);
   const totalTransactions = reports.reduce(
     (sum, report) => sum + report.orders.length,
@@ -99,7 +158,6 @@ export const FilterControl = ({ currentSortReport, reports = [] }: Props) => {
 
   return (
     <div className="mb-6 space-y-4">
-      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-gradient-to-r from-green-400 to-green-600 border-4 border-neutral-700 shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] rounded-none p-4 text-white">
           <div className="flex items-center justify-between">
@@ -141,49 +199,75 @@ export const FilterControl = ({ currentSortReport, reports = [] }: Props) => {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-4">
-        {/* Date Range Filter */}
-        <div className="bg-neutral-50 border-4 border-neutral-700 shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] rounded-none p-4 flex-1">
-          <div className="flex items-center mb-2">
-            <Calendar className="w-5 h-5 mr-2" />
-            <h3 className="font-bold">Rentang Tanggal</h3>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex flex-col flex-1">
-              <label className="text-sm font-medium mb-1">Dari Tanggal</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="border-2 border-neutral-700 p-2 rounded-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+        {(currentReportType === "monthly" ||
+          currentReportType === "yearly") && (
+          <div className="bg-neutral-50 border-4 border-neutral-700 shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] rounded-none p-4 flex-1">
+            <div className="flex items-center mb-2">
+              <Calendar className="w-5 h-5 mr-2" />
+              <h3 className="font-bold">
+                {currentReportType === "monthly"
+                  ? "Filter Bulan & Tahun"
+                  : "Filter Tahun"}
+              </h3>
             </div>
-            <div className="flex flex-col flex-1">
-              <label className="text-sm font-medium mb-1">Sampai Tanggal</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="border-2 border-neutral-700 p-2 rounded-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div className="self-end flex items-center gap-2">
-              <button
-                onClick={handleDateFilter}
-                className="bg-indigo-600 text-white border-4 border-neutral-700 px-6 py-2 font-bold shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px_rgba(20,20,20,1)] active:translate-y-2 active:translate-x-2 active:shadow-none transition-all"
-              >
-                Terapkan
-              </button>
-              <button
-                onClick={handleReset}
-                className="bg-red-600 text-white border-4 border-neutral-700 px-6 py-2 font-bold shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px_rgba(20,20,20,1)] active:translate-y-2 active:translate-x-2 active:shadow-none transition-all"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
-        </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {currentReportType === "monthly" && (
+                <div className="flex flex-col flex-1">
+                  <label className="text-sm font-medium mb-1">Bulan</label>
+                  <div className="relative">
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="w-full appearance-none border-2 border-neutral-700 p-2 pr-10 rounded-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">Pilih Bulan</option>
+                      {months.map((month) => (
+                        <option key={month.value} value={month.value}>
+                          {month.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 pointer-events-none" />
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-col flex-1">
+                <label className="text-sm font-medium mb-1">Tahun</label>
+                <div className="relative">
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    className="w-full appearance-none border-2 border-neutral-700 p-2 pr-10 rounded-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">Pilih Tahun</option>
+                    {years.map((year) => (
+                      <option key={year.value} value={year.value}>
+                        {year.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 pointer-events-none" />
+                </div>
+              </div>
 
-        {/* Report Type Filter */}
+              <div className="self-end flex items-center gap-2">
+                <button
+                  onClick={handleDateFilter}
+                  className="bg-indigo-600 text-white border-4 border-neutral-700 px-6 py-2 font-bold shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px_rgba(20,20,20,1)] active:translate-y-2 active:translate-x-2 active:shadow-none transition-all"
+                >
+                  Terapkan
+                </button>
+                <button
+                  onClick={handleReset}
+                  className="bg-red-600 text-white border-4 border-neutral-700 px-6 py-2 font-bold shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px_rgba(20,20,20,1)] active:translate-y-2 active:translate-x-2 active:shadow-none transition-all"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-neutral-50 border-4 border-neutral-700 shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] rounded-none p-4 flex-1 md:flex-initial md:w-72">
           <div className="flex items-center mb-2">
             <FileText className="w-5 h-5 mr-2" />
@@ -191,6 +275,7 @@ export const FilterControl = ({ currentSortReport, reports = [] }: Props) => {
           </div>
           <div className="relative">
             <select
+              value={currentReportType}
               onChange={handleReportType}
               className="w-full appearance-none border-2 border-neutral-700 p-2 pr-10 rounded-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
@@ -204,7 +289,6 @@ export const FilterControl = ({ currentSortReport, reports = [] }: Props) => {
           </div>
         </div>
 
-        {/* Sort Control */}
         <div className="bg-neutral-50 border-4 border-neutral-700 shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] rounded-none p-4 flex-1 md:flex-initial md:w-72">
           <div className="flex items-center mb-2">
             {currentSortReport === "asc" ? (

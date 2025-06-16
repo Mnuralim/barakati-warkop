@@ -13,10 +13,12 @@ type SalesReportWithAdminOrders = Prisma.SalesReportGetPayload<{
 interface Props {
   reports: SalesReportWithAdminOrders[];
   reportType?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 const PrintableReport = forwardRef<HTMLDivElement, Props>(
-  ({ reports, reportType }, ref) => {
+  ({ reports, reportType, startDate, endDate }, ref) => {
     const totalIncome = reports.reduce((sum, report) => sum + report.income, 0);
     const totalTransactions = reports.reduce(
       (sum, report) => sum + report.orders.length,
@@ -40,6 +42,59 @@ const PrintableReport = forwardRef<HTMLDivElement, Props>(
       }
     };
 
+    const getPeriodInfo = () => {
+      if (!startDate || !endDate) return null;
+
+      const start = new Date(startDate);
+
+      if (reportType === "monthly") {
+        const monthNames = [
+          "Januari",
+          "Februari",
+          "Maret",
+          "April",
+          "Mei",
+          "Juni",
+          "Juli",
+          "Agustus",
+          "September",
+          "Oktober",
+          "November",
+          "Desember",
+        ];
+        return `${monthNames[start.getMonth()]} ${start.getFullYear()}`;
+      }
+
+      if (reportType === "yearly") {
+        return `Tahun ${start.getFullYear()}`;
+      }
+
+      // For custom date range or other types
+      if (startDate === endDate) {
+        return formatDate(startDate);
+      }
+
+      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    };
+
+    const getReportDescription = () => {
+      const period = getPeriodInfo();
+
+      if (reportType === "monthly" && period) {
+        return `Laporan penjualan harian untuk bulan ${period}`;
+      }
+
+      if (reportType === "yearly" && period) {
+        return `Laporan penjualan bulanan untuk ${period}`;
+      }
+
+      if (period && reportType !== "all") {
+        return `Laporan penjualan periode ${period}`;
+      }
+
+      return "Laporan penjualan keseluruhan";
+    };
+
     const formatPeriode = (report: SalesReportWithAdminOrders) => {
       if (reportType === "monthly" && (report as any).displayName) {
         return (report as any).displayName;
@@ -47,11 +102,26 @@ const PrintableReport = forwardRef<HTMLDivElement, Props>(
 
       const formattedDate = formatDate(report.date.toString());
       if (reportType === "monthly") {
-        return formattedDate.split(" ").slice(1, 3).join(" ");
+        return formattedDate.split(" ").slice(0, 3).join(" ");
       }
 
       if (reportType === "yearly") {
-        return `Tahun ${new Date(report.date).getFullYear()}`;
+        const date = new Date(report.date);
+        const monthNames = [
+          "Januari",
+          "Februari",
+          "Maret",
+          "April",
+          "Mei",
+          "Juni",
+          "Juli",
+          "Agustus",
+          "September",
+          "Oktober",
+          "November",
+          "Desember",
+        ];
+        return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
       }
 
       return formattedDate.split(" ").slice(0, 3).join(" ");
@@ -67,11 +137,31 @@ const PrintableReport = forwardRef<HTMLDivElement, Props>(
             Tanggal Cetak: {formatDate(new Date().toISOString())}
           </p>
           <p style={{ fontSize: 12, color: "#888", marginTop: 5 }}>
-            {reportType === "daily" && "Laporan penjualan agregat per hari"}
-            {reportType === "monthly" && "Laporan penjualan agregat per bulan"}
-            {(!reportType || reportType === "all") &&
-              "Laporan penjualan keseluruhan"}
+            {getReportDescription()}
           </p>
+          {getPeriodInfo() && (
+            <div
+              style={{
+                marginTop: 15,
+                padding: "8px 16px",
+                backgroundColor: "#f0f9ff",
+                border: "2px solid #0ea5e9",
+                borderRadius: "4px",
+                display: "inline-block",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: 14,
+                  fontWeight: "bold",
+                  color: "#0369a1",
+                  margin: 0,
+                }}
+              >
+                Periode: {getPeriodInfo()}
+              </p>
+            </div>
+          )}
         </div>
 
         <table
@@ -80,7 +170,13 @@ const PrintableReport = forwardRef<HTMLDivElement, Props>(
           <thead>
             <tr>
               <th style={th}>No</th>
-              <th style={th}>Periode</th>
+              <th style={th}>
+                {reportType === "monthly"
+                  ? "Tanggal"
+                  : reportType === "yearly"
+                  ? "Bulan"
+                  : "Periode"}
+              </th>
               <th style={th}>Total Transaksi</th>
               <th style={th}>Menu Terjual</th>
               <th style={th}>Pendapatan</th>
@@ -159,6 +255,52 @@ const PrintableReport = forwardRef<HTMLDivElement, Props>(
               </p>
             </div>
           </div>
+
+          {/* Additional Report Info */}
+          <div
+            style={{
+              marginTop: 20,
+              paddingTop: 15,
+              borderTop: "1px solid #ddd",
+            }}
+          >
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                gap: 15,
+              }}
+            >
+              <div>
+                <p style={{ margin: "5px 0", fontSize: 14 }}>
+                  <strong>Jenis Laporan:</strong>
+                </p>
+                <p style={{ margin: "5px 0", fontSize: 14, color: "#374151" }}>
+                  {getReportTypeLabel()}
+                </p>
+              </div>
+              {getPeriodInfo() && (
+                <div>
+                  <p style={{ margin: "5px 0", fontSize: 14 }}>
+                    <strong>Periode:</strong>
+                  </p>
+                  <p
+                    style={{ margin: "5px 0", fontSize: 14, color: "#374151" }}
+                  >
+                    {getPeriodInfo()}
+                  </p>
+                </div>
+              )}
+              <div>
+                <p style={{ margin: "5px 0", fontSize: 14 }}>
+                  <strong>Jumlah Data:</strong>
+                </p>
+                <p style={{ margin: "5px 0", fontSize: 14, color: "#374151" }}>
+                  {reports.length} laporan
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div
@@ -175,7 +317,7 @@ const PrintableReport = forwardRef<HTMLDivElement, Props>(
               marginTop: 5,
             }}
           >
-            Menampilkan {reports.length} data laporan
+            {getReportDescription()} • Menampilkan {reports.length} data laporan
           </p>
         </div>
       </div>

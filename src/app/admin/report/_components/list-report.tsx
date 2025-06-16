@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useRef } from "react";
@@ -23,14 +22,63 @@ type SalesReportWithAdminOrders = Prisma.SalesReportGetPayload<{
 interface Props {
   reports: SalesReportWithAdminOrders[];
   currentSortReport?: string;
+  currentReportType?: string;
   reportType?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export const ListReport = ({
   reports,
   currentSortReport,
   reportType,
+  startDate,
+  endDate,
+  currentReportType,
 }: Props) => {
+  const formatPeriodeColumn = (item: SalesReportWithAdminOrders) => {
+    const date = new Date(item.date);
+
+    if (reportType === "monthly") {
+      const monthNames = [
+        "Januari",
+        "Februari",
+        "Maret",
+        "April",
+        "Mei",
+        "Juni",
+        "Juli",
+        "Agustus",
+        "September",
+        "Oktober",
+        "November",
+        "Desember",
+      ];
+      return `${date.getDate()} ${
+        monthNames[date.getMonth()]
+      } ${date.getFullYear()}`;
+    } else if (reportType === "yearly") {
+      const monthNames = [
+        "Januari",
+        "Februari",
+        "Maret",
+        "April",
+        "Mei",
+        "Juni",
+        "Juli",
+        "Agustus",
+        "September",
+        "Oktober",
+        "November",
+        "Desember",
+      ];
+      return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+    } else {
+      const formattedDate = formatDate(item.date.toString());
+      return formattedDate.split(" ").slice(0, 3).join(" ");
+    }
+  };
+
   const columns: TabelColumn<SalesReportWithAdminOrders>[] = [
     {
       header: "No",
@@ -39,24 +87,7 @@ export const ListReport = ({
     },
     {
       header: "Periode",
-      accessor: (item) => {
-        if (reportType === "yearly" && (item as any).displayName) {
-          return (item as any).displayName;
-        }
-
-        if (reportType === "monthly" && (item as any).displayName) {
-          return (item as any).displayName;
-        }
-
-        const formattedDate = formatDate(item.date.toString());
-        if (reportType === "monthly") {
-          return formattedDate.split(" ").slice(1, 3).join(" ");
-        }
-        if (reportType === "yearly") {
-          return `Tahun ${new Date(item.date).getFullYear()}`;
-        }
-        return formattedDate.split(" ").slice(0, 3).join(" ");
-      },
+      accessor: formatPeriodeColumn,
     },
     {
       header: "Total Transaksi",
@@ -72,7 +103,7 @@ export const ListReport = ({
     },
     {
       header: "Kasir",
-      accessor: (item) => item.admin?.username,
+      accessor: (item) => item.admin?.username || "-",
     },
   ];
 
@@ -85,8 +116,6 @@ export const ListReport = ({
 
   const getReportTypeLabel = () => {
     switch (reportType) {
-      case "daily":
-        return "Harian";
       case "monthly":
         return "Bulanan";
       case "yearly":
@@ -98,34 +127,17 @@ export const ListReport = ({
 
   const getReportDescription = () => {
     switch (reportType) {
-      case "daily":
-        return "Laporan penjualan agregat per hari";
       case "monthly":
-        return "Laporan penjualan agregat per bulan";
+        return "Laporan penjualan harian dalam bulan dan tahun yang dipilih";
       case "yearly":
-        return "Laporan penjualan agregat per tahun";
+        return "Laporan penjualan dikelompokkan per bulan dalam tahun yang dipilih";
       default:
         return "Laporan penjualan keseluruhan";
     }
   };
 
   const formatPeriodeForMobile = (report: SalesReportWithAdminOrders) => {
-    if (reportType === "yearly" && (report as any).displayName) {
-      return (report as any).displayName;
-    }
-
-    if (reportType === "monthly" && (report as any).displayName) {
-      return (report as any).displayName;
-    }
-
-    const formattedDate = formatDate(report.date.toString());
-    if (reportType === "monthly") {
-      return formattedDate.split(" ").slice(1, 3).join(" ");
-    }
-    if (reportType === "yearly") {
-      return `Tahun ${new Date(report.date).getFullYear()}`;
-    }
-    return formattedDate.split(" ").slice(0, 3).join(" ");
+    return formatPeriodeColumn(report);
   };
 
   return (
@@ -136,9 +148,11 @@ export const ListReport = ({
         </h1>
         <p className="text-gray-600">{getReportDescription()}</p>
       </div>
-
-      <FilterControl currentSortReport={currentSortReport} reports={reports} />
-
+      <FilterControl
+        currentSortReport={currentSortReport}
+        reports={reports}
+        currentReportType={currentReportType}
+      />
       <div className="flex justify-between items-center mb-5">
         <div className="text-sm text-gray-600">
           Menampilkan {reports.length} laporan
@@ -156,6 +170,8 @@ export const ListReport = ({
           ref={printRef}
           reports={reports}
           reportType={reportType}
+          startDate={startDate || undefined}
+          endDate={endDate || undefined}
         />
       </div>
 
@@ -172,7 +188,11 @@ export const ListReport = ({
               Tidak ada data laporan ditemukan
             </p>
             <p className="text-gray-400 text-sm mt-2">
-              Coba ubah filter atau rentang tanggal
+              {reportType === "monthly"
+                ? "Coba pilih bulan dan tahun yang berbeda"
+                : reportType === "yearly"
+                ? "Coba pilih tahun yang berbeda"
+                : "Coba ubah filter atau rentang tanggal"}
             </p>
           </div>
         ) : (
@@ -186,7 +206,7 @@ export const ListReport = ({
                   {formatPeriodeForMobile(report)}
                 </span>
                 <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-sm text-sm">
-                  {report.admin?.username}
+                  {report.admin?.username || "Sistem"}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">

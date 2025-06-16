@@ -29,11 +29,13 @@ export default async function ReportPage({ searchParams }: Props) {
               Kelola laporan penjualan Anda dengan mudah.
             </p>
           </div>
-
           <ListReport
             reports={reports}
             currentSortReport={sortReport}
             reportType={reportType}
+            startDate={startDate}
+            endDate={endDate}
+            currentReportType={reportType}
           />
         </div>
       </div>
