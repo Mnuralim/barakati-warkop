@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { Sidebar } from "./_components/sidebar";
 import { Navbar } from "./_components/navbar";
 import { getAdmin } from "@/actions/auth";
+import { getSession } from "@/actions/session";
 
 export const metadata: Metadata = {
   title: "Pemesanan - Dashboard",
@@ -20,9 +21,10 @@ export default async function RootLayout({
     (await headersList).get("x-pathname") || (await headersList).get("x-url");
   const isLoginPage = path?.includes("/admin/login");
 
+  const session = await getSession();
   let admin = null;
   if (!isLoginPage) {
-    admin = await getAdmin();
+    admin = await getAdmin(session?.userId as string);
   }
 
   return (

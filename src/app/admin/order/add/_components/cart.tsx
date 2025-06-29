@@ -1,8 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useActionState, useMemo, useState } from "react";
 import { ShoppingCart } from "lucide-react";
 import type { MenuWithCategory } from "./list-menu";
 import { Modal } from "@/app/admin/_components/modal";
-import { useFormState } from "react-dom";
 import { createOrder } from "@/actions/order";
 import { ErrorMessage } from "@/app/admin/_components/error-message";
 
@@ -15,7 +14,7 @@ export const CartSummary = ({ cart, menus }: Props) => {
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [generalNote, setGeneralNote] = useState("");
 
-  const [createState, createAction] = useFormState(createOrder, {
+  const [createState, createAction, pending] = useActionState(createOrder, {
     error: null,
   });
 
@@ -166,6 +165,8 @@ export const CartSummary = ({ cart, menus }: Props) => {
               </div>
 
               <button
+                type="submit"
+                disabled={pending}
                 className="w-full bg-indigo-600 text-white 
                   py-3 rounded-none border-3 border-neutral-800 
                   shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]
@@ -173,9 +174,10 @@ export const CartSummary = ({ cart, menus }: Props) => {
                   transition-all transform 
                   hover:translate-y-1 hover:translate-x-1
                   hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]
-                  font-bold"
+                  font-bold 
+                  disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Tambah Pesanan
+                {pending ? "Memproses Pesanan..." : "Kirim Pesanan"}
               </button>
             </form>
           ) : (

@@ -10,7 +10,8 @@ interface Props {
 }
 
 export default async function AddOrderPage({ searchParams }: Props) {
-  const { category, search, menuType } = await searchParams;
+  const { category, search, menuType, message, error, success } =
+    await searchParams;
   const [menus, categories] = await Promise.all([
     getAllMenu(100000, 0, category, search, menuType as MenuType),
     getAllCategories(),
@@ -23,6 +24,8 @@ export default async function AddOrderPage({ searchParams }: Props) {
         selectedCategory={category}
         selectedMenuType={menuType}
         selectedSearch={search}
+        message={message}
+        toastType={success ? "success" : error ? "error" : undefined}
       />
     </div>
   );

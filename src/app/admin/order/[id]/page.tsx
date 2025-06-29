@@ -3,12 +3,18 @@ import { DetailOrder } from "./_components/detail-order";
 
 interface Props {
   params: Promise<{
-    id: string;
+    id?: string;
+  }>;
+  searchParams: Promise<{
+    message?: string;
+    error?: string;
+    success?: string;
   }>;
 }
 
-export default async function OrderDetailPage({ params }: Props) {
+export default async function OrderDetailPage({ params, searchParams }: Props) {
   const { id = "" } = await params;
+  const { message, error, success } = await searchParams;
   const order = await getOrder(id);
 
   if (!order) {
@@ -23,7 +29,11 @@ export default async function OrderDetailPage({ params }: Props) {
 
   return (
     <div>
-      <DetailOrder order={order} />
+      <DetailOrder
+        order={order}
+        message={message}
+        toastType={success ? "success" : error ? "error" : undefined}
+      />
     </div>
   );
 }

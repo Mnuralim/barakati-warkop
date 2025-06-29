@@ -3,17 +3,16 @@
 import prisma from "@/lib/prisma";
 import { generateInvoicePDF, generateUniqueCode } from "@/lib/utils";
 import type { OrderStatus } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import { redirect } from "next/navigation";
-import { verifySession } from "./session";
+import { getSession } from "./session";
 import { invoiceDoc } from "@/lib/invoice";
 import { imagekit } from "@/lib/imagekit";
 
 interface OrderState {
   error: string | null;
 }
-
-export async function getOrders(
+export const getOrders = unstable_cache(async function getOrders(
   searchQuery?: string,
   status?: OrderStatus,
   sortBy?: string,
@@ -84,9 +83,9 @@ export async function getOrders(
       [sortBy || "created_at"]: sortOrder || "desc",
     },
   });
-}
+});
 
-export async function getOrder(id: string) {
+export const getOrder = unstable_cache(async function (id: string) {
   return await prisma.order.findUnique({
     where: {
       id,
@@ -99,7 +98,7 @@ export async function getOrder(id: string) {
       },
     },
   });
-}
+});
 
 export async function deleteOrder(id: string) {
   await prisma.order.delete({
@@ -188,6 +187,8 @@ export async function createOrder(
     },
   });
 
+  revalidatePath("/");
+  revalidatePath("/admin");
   revalidatePath("/admin/order");
   redirect(`/admin/order/${createdOrder.id}`);
 }
@@ -197,99 +198,121 @@ export async function updateOrder(
   formData: FormData
 ): Promise<OrderState> {
   const id = formData.get("id") as string;
-  const orderStatus = formData.get("orderStatus") as OrderStatus;
 
-  if (!id) {
-    return { error: "ID order tidak ditemukan" };
-  }
+  try {
+    const orderStatus = formData.get("orderStatus") as OrderStatus;
 
-  if (!orderStatus) {
-    return { error: "Status order tidak ditemukan" };
-  }
+    if (!id) {
+      throw new Error("ID order tidak ditemukan");
+    }
 
-  const order = await prisma.order.findUnique({
-    where: {
-      id,
-    },
-  });
-  if (!order) {
-    return { error: "Order tidak ditemukan" };
-  }
+    if (!orderStatus) {
+      throw new Error("Status order tidak ditemukan");
+    }
 
-  if (order.status === "COMPLETED") {
-    return { error: "Pesanan sudah selesai" };
-  }
-
-  if (order.status === "CANCELLED") {
-    return { error: "Pesanan sudah dibatalkan" };
-  }
-
-  const updatedOrder = await prisma.order.update({
-    where: {
-      id,
-    },
-    data: {
-      status: orderStatus,
-    },
-    include: {
-      orderItems: true,
-    },
-  });
-
-  if (updatedOrder.status === "COMPLETED") {
-    const orderDate = new Date(updatedOrder.created_at);
-    orderDate.setHours(0, 0, 0, 0);
-
-    const session = await verifySession();
-    const report = await prisma.salesReport.findFirst({
+    const order = await prisma.order.findUnique({
       where: {
-        date: orderDate,
-        admin_id: session.userId,
+        id,
+      },
+    });
+    if (!order) {
+      throw new Error("Order tidak ditemukan");
+    }
+
+    if (order.status === "COMPLETED") {
+      throw new Error("Pesanan sudah selesai");
+    }
+
+    if (order.status === "CANCELLED") {
+      return { error: "Pesanan sudah dibatalkan" };
+    }
+
+    const updatedOrder = await prisma.order.update({
+      where: {
+        id,
+      },
+      data: {
+        status: orderStatus,
+      },
+      include: {
+        orderItems: true,
       },
     });
 
-    const totalItems = updatedOrder.orderItems.reduce((acc, item) => {
-      return acc + item.quantity;
-    }, 0);
+    if (updatedOrder.status === "COMPLETED") {
+      const orderDate = new Date(updatedOrder.created_at);
+      orderDate.setHours(0, 0, 0, 0);
 
-    if (report) {
-      await prisma.salesReport.update({
+      const session = await getSession();
+      const report = await prisma.salesReport.findFirst({
         where: {
-          id: report.id,
-        },
-        data: {
-          total_items_sold: {
-            increment: totalItems,
-          },
-          income: {
-            increment: updatedOrder.total_price,
-          },
-          orders: {
-            connect: {
-              id,
-            },
-          },
-        },
-      });
-    } else {
-      await prisma.salesReport.create({
-        data: {
           date: orderDate,
-          total_items_sold: totalItems,
-          income: updatedOrder.total_price,
-          admin_id: session.userId as string,
-          orders: {
-            connect: {
-              id,
-            },
-          },
+          admin_id: session?.userId as string,
         },
       });
+
+      const totalItems = updatedOrder.orderItems.reduce((acc, item) => {
+        return acc + item.quantity;
+      }, 0);
+
+      if (report) {
+        await prisma.salesReport.update({
+          where: {
+            id: report.id,
+          },
+          data: {
+            total_items_sold: {
+              increment: totalItems,
+            },
+            income: {
+              increment: updatedOrder.total_price,
+            },
+            orders: {
+              connect: {
+                id,
+              },
+            },
+          },
+        });
+      } else {
+        await prisma.salesReport.create({
+          data: {
+            date: orderDate,
+            total_items_sold: totalItems,
+            income: updatedOrder.total_price,
+            admin_id: session?.userId as string,
+            orders: {
+              connect: {
+                id,
+              },
+            },
+          },
+        });
+      }
+      revalidatePath("/admin/report");
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      redirect(
+        `/admin/order/${id}?error=1&message=${encodeURIComponent(
+          error.message
+        )}`
+      );
+    } else {
+      redirect(
+        `/admin/order/${id}?error=1&message=${encodeURIComponent(
+          "Terjadi kesalahan saat memperbarui status pesanan"
+        )}`
+      );
     }
   }
-
+  revalidatePath("/");
+  revalidatePath("/admin");
   revalidatePath(`/admin/order/${id}`);
-  redirect(`/admin/order/${id}`);
+  revalidatePath(`/admin/order`);
+  redirect(
+    `/admin/order/${id}?success=1&message=Status pesanan berhasil diperbarui`
+  );
 }
 
 export async function createInvoice(orderId: string): Promise<void> {
@@ -342,8 +365,20 @@ export async function createInvoice(orderId: string): Promise<void> {
       },
     });
   } catch (error) {
-    console.error(error);
-    throw new Error("Gagal membuat invoice");
+    if (error instanceof Error) {
+      redirect(
+        `/admin/order/${orderId}?error=1&message=${encodeURIComponent(
+          error.message
+        )}`
+      );
+    } else {
+      redirect(
+        `/admin/order/${orderId}?error=1&message=${encodeURIComponent(
+          "Terjadi kesalahan saat membuat invoice"
+        )}`
+      );
+    }
   }
   revalidatePath(`/admin/order/${orderId}`);
+  redirect(`/admin/order/${orderId}?success=1&message=Invoice berhasil dibuat`);
 }

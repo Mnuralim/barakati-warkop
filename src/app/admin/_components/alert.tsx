@@ -45,8 +45,8 @@ export const Alert = ({
             <AlertTriangle className="w-8 h-8 text-white" strokeWidth={3} />
           )}
         </div>
-        <h2 className="text-2xl font-black mt-2 text-white">{title}</h2>
-        <p className="text-center font-medium text-gray-300">{message}</p>
+        <h2 className="text-2xl font-black mt-2">{title}</h2>
+        <p className="text-center font-medium text-gray-800">{message}</p>
 
         <form className="flex w-full gap-4 mt-4">
           {onConfirm && (

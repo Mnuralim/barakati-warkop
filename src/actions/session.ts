@@ -17,9 +17,13 @@ export async function encrypt(payload: SessionPayload) {
 
 export async function decrypt(session: string | undefined = "") {
   try {
-    const { payload } = await jwtVerify(session, key, {
-      algorithms: ["HS256"],
-    });
+    const { payload }: { payload: SessionPayload } = await jwtVerify(
+      session,
+      key,
+      {
+        algorithms: ["HS256"],
+      }
+    );
 
     return payload;
   } catch (error) {
@@ -51,6 +55,12 @@ export async function verifySession() {
   }
 
   return { isAuth: true, userId: session.userId };
+}
+
+export async function getSession() {
+  const session = (await cookies()).get("session")?.value;
+  if (!session) return null;
+  return await decrypt(session);
 }
 
 export async function deleteSession() {

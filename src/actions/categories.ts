@@ -1,5 +1,8 @@
 import prisma from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
 
-export async function getAllCategories() {
-  return await prisma.category.findMany();
-}
+export const getAllCategories = unstable_cache(
+  async function getAllCategories() {
+    return await prisma.category.findMany();
+  }
+);

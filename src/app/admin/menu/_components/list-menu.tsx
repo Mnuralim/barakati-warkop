@@ -14,6 +14,7 @@ import { Alert } from "../../_components/alert";
 import { useRouter } from "next/navigation";
 import { Tabel, type TabelColumn } from "../../_components/tabel";
 import { FilterControl1 } from "./filter-control";
+import { Toast } from "../../_components/toast";
 
 type MenuWithCategory = Prisma.MenuGetPayload<{
   include: { categories: true };
@@ -39,6 +40,8 @@ interface Props {
   categories: Category[];
   currentSortMenu?: string;
   modal?: string;
+  toastType?: "success" | "error";
+  message?: string;
 }
 
 export const ListMenu = ({
@@ -46,6 +49,8 @@ export const ListMenu = ({
   categories,
   modal,
   currentSortMenu,
+  message,
+  toastType,
 }: Props) => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [stock, setStock] = useState("");
@@ -103,6 +108,10 @@ export const ListMenu = ({
     setMenuType(item.menuType);
     setStock(item.status ? "Tersedia" : "Kosong");
     router.push(`/admin/menu?modal=edit`);
+  };
+
+  const handleCloseToast = () => {
+    router.replace("/admin/menu", { scroll: false });
   };
 
   const columns: TabelColumn<MenuWithCategory>[] = [
@@ -437,6 +446,14 @@ export const ListMenu = ({
         message={alert.message}
         type={alert.type}
         onConfirm={alert.onConfirm}
+      />
+
+      <Toast
+        isVisible={message !== undefined}
+        message={(message as string) || ""}
+        onClose={handleCloseToast}
+        type={(toastType as "success" | "error") || "success"}
+        autoClose
       />
     </div>
   );

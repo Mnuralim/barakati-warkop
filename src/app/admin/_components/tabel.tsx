@@ -38,7 +38,7 @@ export function Tabel<T extends Record<string, unknown>>({
             {columns.map((column, index) => (
               <th
                 key={index}
-                className={`px-6 py-4 text-left font-black text-lg ${
+                className={`px-6 py-4 text-left font-black ${
                   column.className || ""
                 }`}
               >

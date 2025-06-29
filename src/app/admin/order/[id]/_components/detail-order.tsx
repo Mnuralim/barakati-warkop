@@ -1,15 +1,16 @@
 "use client";
-import React, { useState } from "react";
+import React, { useActionState, useState } from "react";
 import { ArrowLeft, Check, Edit, Printer } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Modal } from "@/app/admin/_components/modal";
 import type { OrderStatus, Prisma } from "@prisma/client";
-import { useFormState } from "react-dom";
 import { createInvoice, updateOrder } from "@/actions/order";
 import { ErrorMessage } from "@/app/admin/_components/error-message";
 import { CreateInvoiceButton } from "./create-invoice-button";
+import { Toast } from "@/app/admin/_components/toast";
+import { useRouter } from "next/navigation";
 
 type OrderWithItems = Prisma.OrderGetPayload<{
   include: {
@@ -23,6 +24,8 @@ type OrderWithItems = Prisma.OrderGetPayload<{
 
 interface Props {
   order: OrderWithItems;
+  toastType?: "success" | "error";
+  message?: string;
 }
 
 const orderStatus = [
@@ -40,15 +43,17 @@ const orderStatus = [
   },
 ];
 
-export const DetailOrder = ({ order }: Props) => {
+export const DetailOrder = ({ order, message, toastType }: Props) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus>(
     order.status
   );
   const [paymentAmount, setPaymentAmount] = useState<number>(order.total_price);
-  const [updateState, updateAction] = useFormState(updateOrder, {
+  const [updateState, updateAction, pending] = useActionState(updateOrder, {
     error: null,
   });
+
+  const router = useRouter();
 
   const getStatusColorClasses = (status: OrderStatus) => {
     switch (status) {
@@ -92,6 +97,10 @@ export const DetailOrder = ({ order }: Props) => {
       return "Pesanan sudah dibatalkan, status tidak dapat diubah lagi";
     }
     return "";
+  };
+
+  const handleCloseToast = () => {
+    router.replace(`/admin/order/${order.id}`, { scroll: false });
   };
 
   return (
@@ -384,6 +393,13 @@ export const DetailOrder = ({ order }: Props) => {
           </div>
         </div>
       </div>
+      <Toast
+        isVisible={message !== undefined}
+        message={(message as string) || ""}
+        onClose={handleCloseToast}
+        type={(toastType as "success" | "error") || "success"}
+        autoClose
+      />
 
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)}>
         <form
@@ -484,17 +500,22 @@ export const DetailOrder = ({ order }: Props) => {
             <button
               type="submit"
               disabled={
-                selectedStatus === "COMPLETED" &&
-                paymentAmount < order.total_price
+                (selectedStatus === "COMPLETED" &&
+                  paymentAmount < order.total_price) ||
+                pending
               }
               className={`${
                 selectedStatus === "COMPLETED" &&
                 paymentAmount < order.total_price
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-indigo-600 hover:translate-y-1 hover:translate-x-1 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-              } text-white px-5 py-3 rounded-md border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all font-bold`}
+              } text-white px-5 py-3 rounded-md border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all font-bold disabled:opacity-50`}
             >
-              Simpan Perubahan
+              {pending
+                ? "Menyimpan..."
+                : selectedStatus === "COMPLETED"
+                ? "Simpan"
+                : "Simpan"}
             </button>
           </div>
         </form>

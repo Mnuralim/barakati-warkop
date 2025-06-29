@@ -7,6 +7,8 @@ import { Filters } from "./filter";
 import { CartSummary } from "./cart";
 import { EmptyMenu } from "./empty-menu";
 import { MenuCard } from "./menu-card";
+import { Toast } from "@/app/admin/_components/toast";
+import { useRouter } from "next/navigation";
 
 export type MenuWithCategory = Prisma.MenuGetPayload<{
   include: {
@@ -20,6 +22,8 @@ interface Props {
   selectedCategory?: string;
   selectedSearch?: string;
   selectedMenuType?: string;
+  toastType?: "success" | "error";
+  message?: string;
 }
 
 export const ListMenu = ({
@@ -28,10 +32,13 @@ export const ListMenu = ({
   selectedCategory,
   selectedMenuType,
   selectedSearch,
+  message,
+  toastType,
 }: Props) => {
   const [cart, setCart] = useState<{ [key: string]: number }>({});
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -60,6 +67,10 @@ export const ListMenu = ({
       }
       return newCart;
     });
+  };
+
+  const handleCloseToast = () => {
+    router.replace("/admin/menu", { scroll: false });
   };
 
   return (
@@ -127,6 +138,13 @@ export const ListMenu = ({
         </div>
       </div>
       <CartSummary cart={cart} menus={menus} />
+      <Toast
+        isVisible={message !== undefined}
+        message={(message as string) || ""}
+        onClose={handleCloseToast}
+        type={(toastType as "success" | "error") || "success"}
+        autoClose
+      />
     </div>
   );
 };

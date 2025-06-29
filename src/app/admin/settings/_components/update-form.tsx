@@ -1,21 +1,30 @@
 "use client";
-import React, { useState } from "react";
-import { useFormState } from "react-dom";
+import React, { useActionState, useState } from "react";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import { ErrorMessage } from "../../_components/error-message";
 import { updateAdmin } from "@/actions/auth";
+import { Toast } from "../../_components/toast";
+import { useRouter } from "next/navigation";
 
 interface Props {
   admin: {
     id: string;
     username: string;
   };
+  toastType?: "success" | "error";
+  message?: string;
 }
 
-export const UpdateAdminForm = ({ admin }: Props) => {
-  const [state, formAction] = useFormState(updateAdmin, { error: null });
+export const UpdateAdminForm = ({ admin, message, toastType }: Props) => {
+  const [state, formAction, pending] = useActionState(updateAdmin, {
+    error: null,
+  });
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const router = useRouter();
 
+  const handleCloseToast = () => {
+    router.replace("/admin/settings", { scroll: false });
+  };
   return (
     <div className="bg-neutral-50 border-4 border-neutral-700 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-8 rounded-none">
       <div className="flex items-center mb-6 border-b-4 border-indigo-600 pb-3">
@@ -90,13 +99,21 @@ export const UpdateAdminForm = ({ admin }: Props) => {
 
         <div className="pt-6">
           <button
+            disabled={pending}
             type="submit"
-            className="bg-indigo-600 text-white border-4 border-neutral-700 px-6 py-3 font-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-2 active:translate-x-2 active:shadow-none transition-all w-full md:w-auto"
+            className="bg-indigo-600 text-white border-4 border-neutral-700 px-6 py-3 font-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:translate-x-1 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-2 active:translate-x-2 active:shadow-none transition-all w-full md:w-auto disabled:opacity-50 "
           >
-            Simpan Perubahan
+            {pending ? "Memperbarui..." : "Perbarui Profil"}
           </button>
         </div>
       </form>
+      <Toast
+        isVisible={message !== undefined}
+        message={(message as string) || ""}
+        onClose={handleCloseToast}
+        type={(toastType as "success" | "error") || "success"}
+        autoClose
+      />
     </div>
   );
 };

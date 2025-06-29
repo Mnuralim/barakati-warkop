@@ -41,7 +41,7 @@ export const Modal = ({ isOpen, onClose, children }: Props) => {
   if (!isModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-40 backdrop-blur-md">
+    <div className="fixed inset-0 flex items-center justify-center z-[9999] backdrop-blur-md">
       <div className="w-full max-w-lg bg-neutral-50 border-4 border-neutral-200 shadow-[8px_8px_0px_0px_rgba(230,230,230,1)] mx-3 p-4 md:p-8 rounded-none relative transition-all animate-[bounceIn_0.3s_ease-in-out]">
         <button
           onClick={onClose}

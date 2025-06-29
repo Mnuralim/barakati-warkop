@@ -10,8 +10,17 @@ interface Props {
 }
 
 export default async function MenuPage({ searchParams }: Props) {
-  const { modal, category, search, menuType, sortBy, sortMenu } =
-    await searchParams;
+  const {
+    modal,
+    category,
+    search,
+    menuType,
+    sortBy,
+    sortMenu,
+    message,
+    error,
+    success,
+  } = await searchParams;
   const [menus, categories] = await Promise.all([
     getAllMenu(
       1000000,
@@ -43,6 +52,8 @@ export default async function MenuPage({ searchParams }: Props) {
             categories={categories}
             modal={modal}
             currentSortMenu={sortMenu}
+            message={message}
+            toastType={success ? "success" : error ? "error" : undefined}
           />
         </div>
       </div>
