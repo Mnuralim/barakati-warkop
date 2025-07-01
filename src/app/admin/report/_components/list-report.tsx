@@ -10,7 +10,19 @@ import PrintableReport from "./pdf-report";
 
 type SalesReportWithAdminOrders = Prisma.SalesReportGetPayload<{
   include: {
-    orders: true;
+    orders: {
+      include: {
+        orderItems: {
+          include: {
+            menu: {
+              select: {
+                name: true;
+              };
+            };
+          };
+        };
+      };
+    };
     admin: {
       select: {
         username: true;
@@ -79,6 +91,23 @@ export const ListReport = ({
     }
   };
 
+  const getMenuSold = (item: SalesReportWithAdminOrders) => {
+    const menuCounts = new Map<string, number>();
+
+    item.orders.forEach((order) => {
+      order.orderItems.forEach((orderItem) => {
+        const menuName = orderItem.menu.name;
+        const quantity = orderItem.quantity;
+        menuCounts.set(menuName, (menuCounts.get(menuName) || 0) + quantity);
+      });
+    });
+
+    return Array.from(menuCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => `${name} (${count})`)
+      .join(", ");
+  };
+
   const columns: TabelColumn<SalesReportWithAdminOrders>[] = [
     {
       header: "No",
@@ -96,6 +125,20 @@ export const ListReport = ({
     {
       header: "Menu Terjual",
       accessor: "total_items_sold",
+    },
+    {
+      header: "Detail Menu",
+      accessor: getMenuSold,
+      render: (item) => {
+        const menuText = getMenuSold(item);
+        return (
+          <div className="max-w-xs">
+            <div className="" title={menuText}>
+              {menuText || "-"}
+            </div>
+          </div>
+        );
+      },
     },
     {
       header: "Pendapatan",
@@ -147,11 +190,18 @@ export const ListReport = ({
           Laporan Penjualan {getReportTypeLabel()}
         </h1>
         <p className="text-gray-600">{getReportDescription()}</p>
+        {startDate && endDate && (
+          <p className="text-sm text-indigo-600 font-medium mt-1">
+            Periode: {formatDate(startDate)} - {formatDate(endDate)}
+          </p>
+        )}
       </div>
       <FilterControl
         currentSortReport={currentSortReport}
         reports={reports}
         currentReportType={currentReportType}
+        startDate={startDate}
+        endDate={endDate}
       />
       <div className="flex justify-between items-center mb-5">
         <div className="text-sm text-gray-600">
@@ -209,7 +259,7 @@ export const ListReport = ({
                   {report.admin?.username || "Sistem"}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                 <div>
                   <p className="text-gray-600">Total Transaksi</p>
                   <p className="font-semibold">{report.orders.length}</p>
@@ -218,12 +268,20 @@ export const ListReport = ({
                   <p className="text-gray-600">Menu Terjual</p>
                   <p className="font-semibold">{report.total_items_sold}</p>
                 </div>
-                <div className="col-span-2">
-                  <p className="text-gray-600">Pendapatan</p>
-                  <p className="font-bold text-lg">
-                    {formatCurrency(report.income)}
-                  </p>
+              </div>
+
+              <div className="mb-3">
+                <p className="text-gray-600 text-sm mb-1">Detail Menu:</p>
+                <div className="bg-white border-2 border-gray-300 p-2 rounded-sm text-xs">
+                  {getMenuSold(report) || "Tidak ada menu terjual"}
                 </div>
+              </div>
+
+              <div>
+                <p className="text-gray-600">Pendapatan</p>
+                <p className="font-bold text-lg">
+                  {formatCurrency(report.income)}
+                </p>
               </div>
             </div>
           ))

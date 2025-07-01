@@ -5,7 +5,19 @@ import { type Prisma } from "@prisma/client";
 
 type SalesReportWithAdminOrders = Prisma.SalesReportGetPayload<{
   include: {
-    orders: true;
+    orders: {
+      include: {
+        orderItems: {
+          include: {
+            menu: {
+              select: {
+                name: true;
+              };
+            };
+          };
+        };
+      };
+    };
     admin: { select: { username: true } };
   };
 }>;
@@ -69,7 +81,6 @@ const PrintableReport = forwardRef<HTMLDivElement, Props>(
         return `Tahun ${start.getFullYear()}`;
       }
 
-      // For custom date range or other types
       if (startDate === endDate) {
         return formatDate(startDate);
       }
@@ -93,6 +104,23 @@ const PrintableReport = forwardRef<HTMLDivElement, Props>(
       }
 
       return "Laporan penjualan keseluruhan";
+    };
+
+    const getMenuSold = (item: SalesReportWithAdminOrders) => {
+      const menuCounts = new Map<string, number>();
+
+      item.orders.forEach((order) => {
+        order.orderItems.forEach((orderItem) => {
+          const menuName = orderItem.menu.name;
+          const quantity = orderItem.quantity;
+          menuCounts.set(menuName, (menuCounts.get(menuName) || 0) + quantity);
+        });
+      });
+
+      return Array.from(menuCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => `${name} (${count})`)
+        .join(", ");
     };
 
     const formatPeriode = (report: SalesReportWithAdminOrders) => {
@@ -179,6 +207,7 @@ const PrintableReport = forwardRef<HTMLDivElement, Props>(
               </th>
               <th style={th}>Total Transaksi</th>
               <th style={th}>Menu Terjual</th>
+              <th style={th}>Detail Menu</th>
               <th style={th}>Pendapatan</th>
               <th style={th}>Kasir</th>
             </tr>
@@ -190,6 +219,7 @@ const PrintableReport = forwardRef<HTMLDivElement, Props>(
                 <td style={td}>{formatPeriode(report)}</td>
                 <td style={td}>{report.orders.length}</td>
                 <td style={td}>{report.total_items_sold}</td>
+                <td style={td}>{getMenuSold(report)}</td>
                 <td style={td}>{formatCurrency(report.income)}</td>
                 <td style={td}>{report.admin?.username}</td>
               </tr>
@@ -209,6 +239,7 @@ const PrintableReport = forwardRef<HTMLDivElement, Props>(
               <td style={totalRowStyle}>
                 <strong>{formatCurrency(totalIncome)}</strong>
               </td>
+              <td style={totalRowStyle}>-</td>
               <td style={totalRowStyle}>-</td>
             </tr>
           </tfoot>

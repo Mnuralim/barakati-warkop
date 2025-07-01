@@ -17,6 +17,7 @@ export default async function ReportPage({ searchParams }: Props) {
     sortReport,
     reportType
   );
+
   return (
     <main className="w-full px-3 sm:px-3 md:px-8 py-8 min-h-screen bg-neutral-50">
       <div className="mx-auto">

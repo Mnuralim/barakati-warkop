@@ -37,7 +37,19 @@ export async function getReports(
         [sortBy || "date"]: sortReport || "desc",
       },
       include: {
-        orders: true,
+        orders: {
+          include: {
+            orderItems: {
+              include: {
+                menu: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         admin: {
           select: {
             username: true,
@@ -45,7 +57,6 @@ export async function getReports(
         },
       },
     });
-    //
     return reports;
   }
 
@@ -53,7 +64,19 @@ export async function getReports(
     const rawReports = await prisma.salesReport.findMany({
       where,
       include: {
-        orders: true,
+        orders: {
+          include: {
+            orderItems: {
+              include: {
+                menu: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         admin: {
           select: {
             username: true,
@@ -95,7 +118,6 @@ export async function getReports(
     aggregatedReports.sort((a, b) => {
       const sortField = sortBy || "date";
       const sortOrder = sortReport || "desc";
-
       let aValue = a[sortField as keyof typeof a];
       let bValue = b[sortField as keyof typeof b];
 
@@ -120,7 +142,19 @@ export async function getReports(
       [sortBy || "created_at"]: sortReport || "desc",
     },
     include: {
-      orders: true,
+      orders: {
+        include: {
+          orderItems: {
+            include: {
+              menu: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
       admin: {
         select: {
           username: true,
